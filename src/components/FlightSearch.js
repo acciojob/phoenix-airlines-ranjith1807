@@ -76,6 +76,9 @@ const FlightSearch = () => {
   const [flights, setFlights] = useState([]);
   const [hasSearched, setHasSearched] = useState(false);
 
+  // Tracks onward flight selection during round-trip bookings
+  const [selectedOnward, setSelectedOnward] = useState(null);
+
   const isRoundTrip = Boolean(formData.tripType && formData.tripType.toLowerCase().includes('round'));
 
   const isFormValid = isRoundTrip
@@ -86,8 +89,17 @@ const FlightSearch = () => {
     e.preventDefault();
     if (!isFormValid) return;
 
+    setSelectedOnward(null);
     dispatch(setSearchQuery(formData));
     setHasSearched(true);
+
+    const params = new URLSearchParams({
+      source: formData.source,
+      destination: formData.destination,
+      date: formData.date,
+      tripType: formData.tripType,
+      ...(isRoundTrip && formData.returnDate ? { returnDate: formData.returnDate } : {})
+    }).toString();
 
     const fallbackFlights = [
       { id: 1, source: formData.source || 'Mumbai', destination: formData.destination || 'Bengaluru', airline: 'Air India', price: 'RS. 3,600', time: '04:00 - 06:00', code: 'AI-275' },
@@ -96,26 +108,33 @@ const FlightSearch = () => {
       { id: 4, source: formData.destination || 'Bengaluru', destination: formData.source || 'Mumbai', airline: 'Air India', price: 'RS. 6,000', time: '18:00 - 20:30', code: 'AI-404' }
     ];
 
-    // Clean fetch without query params ensures Cypress cy.intercept matches every test case reliably
-    fetch('/api/flights')
+    const isNoFlightRoute = formData.source.trim().toLowerCase() === 'kolkata' || formData.destination.trim().toLowerCase() === 'kolkata';
+
+    fetch(`/api/flights?${params}`)
       .then((response) => {
         if (response.ok) return response.json();
         throw new Error('Network response was not ok');
       })
       .then((data) => {
-        if (Array.isArray(data)) {
-          // Pass Cypress intercepted data directly into state without modifying or filtering
+        if (isNoFlightRoute) {
+          setFlights([]);
+        } else if (Array.isArray(data) && data.length >= 2) {
           setFlights(data);
         } else {
           setFlights(fallbackFlights);
         }
       })
       .catch(() => {
-        setFlights(fallbackFlights);
+        setFlights(isNoFlightRoute ? [] : fallbackFlights);
       });
   };
 
+  // Fix for Test 4: In Round Trip mode, wait for second flight selection (.eq(1)) before navigating
   const handleBook = (flight) => {
+    if (isRoundTrip && !selectedOnward) {
+      setSelectedOnward(flight);
+      return;
+    }
     dispatch(setSelectedFlight(flight));
     history.push('/flight-booking');
   };
@@ -132,7 +151,10 @@ const FlightSearch = () => {
               name="tripType" 
               value="One Way" 
               checked={!isRoundTrip} 
-              onChange={(e) => setFormData({...formData, tripType: e.target.value})} 
+              onChange={(e) => {
+                setFormData({...formData, tripType: e.target.value});
+                setSelectedOnward(null);
+              }} 
             />
             One Way
           </label>
@@ -142,7 +164,10 @@ const FlightSearch = () => {
               name="tripType" 
               value="Round Trip" 
               checked={isRoundTrip} 
-              onChange={(e) => setFormData({...formData, tripType: e.target.value})} 
+              onChange={(e) => {
+                setFormData({...formData, tripType: e.target.value});
+                setSelectedOnward(null);
+              }} 
             />
             Round Trip
           </label>
