@@ -8,12 +8,12 @@ const FlightBooking = () => {
   const history = useHistory();
   const selectedFlight = useSelector((state) => state.flight.selectedFlight);
   
-  const [user, setUser] = useState({ name: '', email: '', phone: '' });
+  const [user, setUser] = useState({ firstName: '', lastName: '', email: '', phone: '' });
   const [error, setError] = useState('');
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (!user.name || !user.email || !user.phone) {
+    if (!user.firstName || !user.lastName || !user.email || !user.phone) {
       setError('All fields are required.');
       return;
     }
@@ -30,16 +30,35 @@ const FlightBooking = () => {
 
   return (
     <div>
-      <h2>Book Flight</h2>
-      <p>Booking: {selectedFlight.airline} for {selectedFlight.price}</p>
+      <h2>Booking Confirmation for Flight {selectedFlight.airline} ({selectedFlight.code})</h2>
       {error && <p style={{color: 'red'}}>{error}</p>}
       
       <form onSubmit={handleSubmit}>
-        {/* Cypress looks for input[type='text'] */}
-        <input type="text" placeholder="Full Name" value={user.name} onChange={(e) => setUser({...user, name: e.target.value})} />
-        <input type="text" placeholder="Email" value={user.email} onChange={(e) => setUser({...user, email: e.target.value})} />
-        <input type="text" placeholder="Phone Number" value={user.phone} onChange={(e) => setUser({...user, phone: e.target.value})} />
-        <button type="submit">Confirm Booking</button>
+        <input 
+          type="text" 
+          placeholder="First Name *" 
+          value={user.firstName} 
+          onChange={(e) => setUser({...user, firstName: e.target.value})} 
+        />
+        <input 
+          type="text" 
+          placeholder="Last Name *" 
+          value={user.lastName} 
+          onChange={(e) => setUser({...user, lastName: e.target.value})} 
+        />
+        <input 
+          type="text" 
+          placeholder="Email ID *" 
+          value={user.email} 
+          onChange={(e) => setUser({...user, email: e.target.value})} 
+        />
+        <input 
+          type="text" 
+          placeholder="Mobile Number *" 
+          value={user.phone} 
+          onChange={(e) => setUser({...user, phone: e.target.value})} 
+        />
+        <button type="submit">CONFIRM BOOKING</button>
       </form>
     </div>
   );

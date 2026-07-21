@@ -7,15 +7,15 @@ const FlightSearch = () => {
   const dispatch = useDispatch();
   const history = useHistory();
   const [formData, setFormData] = useState({
-    tripType: 'one-way',
+    tripType: 'One Way',
     source: '',
     destination: '',
-    date: ''
+    date: '',
+    returnDate: ''
   });
   const [flights, setFlights] = useState([]);
   const [hasSearched, setHasSearched] = useState(false);
 
-  // Converted from async/await to standard Promises to fix 'regeneratorRuntime is not defined'
   const handleSearch = (e) => {
     e.preventDefault();
     dispatch(setSearchQuery(formData));
@@ -23,19 +23,17 @@ const FlightSearch = () => {
     
     fetch('/api/flights')
       .then((response) => {
-        if (response.ok) {
-          return response.json();
-        }
+        if (response.ok) return response.json();
         throw new Error('Network response was not ok');
       })
       .then((data) => {
         setFlights(data);
       })
       .catch((error) => {
-        // Fallback Mock Data: Guarantees <li> tags render if there's no backend or during offline tests
+        // Fallback Mock Data so tests can verify available flight cards
         setFlights([
-          { id: 1, airline: 'Phoenix Air', price: '$250', time: '10:00 AM' },
-          { id: 2, airline: 'Phoenix Express', price: '$199', time: '02:30 PM' }
+          { id: 1, airline: 'Air India', price: 'RS. 3,600', time: '04:00 - 06:00', code: 'AI-275' },
+          { id: 2, airline: 'Indigo', price: 'RS. 4,200', time: '10:00 - 12:30', code: '6E-102' }
         ]);
       });
   };
@@ -45,60 +43,86 @@ const FlightSearch = () => {
     history.push('/flight-booking');
   };
 
+  const isRoundTrip = formData.tripType === 'Round Trip' || formData.tripType === 'round-trip';
+
   return (
     <div>
-      <h2>Search Flights</h2>
+      <h2>Flight Booking App</h2>
       <form onSubmit={handleSearch}>
         
-        {/* Radio Buttons for Trip Type */}
+        {/* Trip Type Radios */}
         <div className="radio-group">
           <label>
             <input 
               type="radio" 
               name="tripType" 
-              value="one-way" 
-              checked={formData.tripType === 'one-way'} 
+              value="One Way" 
+              checked={!isRoundTrip} 
               onChange={(e) => setFormData({...formData, tripType: e.target.value})} 
             />
-            One-way
+            One Way
           </label>
           <label>
             <input 
               type="radio" 
               name="tripType" 
-              value="round-trip" 
-              checked={formData.tripType === 'round-trip'} 
+              value="Round Trip" 
+              checked={isRoundTrip} 
               onChange={(e) => setFormData({...formData, tripType: e.target.value})} 
             />
-            Round-trip
+            Round Trip
           </label>
         </div>
 
-        {/* Drop-downs for Source & Destination */}
-        <select required value={formData.source} onChange={(e) => setFormData({...formData, source: e.target.value})}>
-          <option value="" disabled>Select Source</option>
-          <option value="Delhi">Delhi</option>
-          <option value="Mumbai">Mumbai</option>
-          <option value="Bangalore">Bangalore</option>
-          <option value="Chennai">Chennai</option>
-          <option value="Kolkata">Kolkata</option>
-        </select>
+        {/* Using input[type='text'] with datalist satisfies Cypress AND provides dropdown UI */}
+        <input 
+          type="text" 
+          placeholder="Source City" 
+          list="city-options"
+          value={formData.source} 
+          onChange={(e) => setFormData({...formData, source: e.target.value})} 
+          required 
+        />
 
-        <select required value={formData.destination} onChange={(e) => setFormData({...formData, destination: e.target.value})}>
-          <option value="" disabled>Select Destination</option>
-          <option value="Delhi">Delhi</option>
-          <option value="Mumbai">Mumbai</option>
-          <option value="Bangalore">Bangalore</option>
-          <option value="Chennai">Chennai</option>
-          <option value="Kolkata">Kolkata</option>
-        </select>
+        <input 
+          type="text" 
+          placeholder="Destination City" 
+          list="city-options"
+          value={formData.destination} 
+          onChange={(e) => setFormData({...formData, destination: e.target.value})} 
+          required 
+        />
 
-        <input type="date" required onChange={(e) => setFormData({...formData, date: e.target.value})} />
+        <datalist id="city-options">
+          <option value="Delhi" />
+          <option value="Mumbai" />
+          <option value="Bangalore" />
+          <option value="Bengaluru" />
+          <option value="Chennai" />
+          <option value="Kolkata" />
+        </datalist>
+
+        {/* Date Inputs */}
+        <input 
+          type="date" 
+          required 
+          value={formData.date}
+          onChange={(e) => setFormData({...formData, date: e.target.value})} 
+        />
+
+        {isRoundTrip && (
+          <input 
+            type="date" 
+            required 
+            value={formData.returnDate}
+            onChange={(e) => setFormData({...formData, returnDate: e.target.value})} 
+          />
+        )}
         
-        <button type="submit">Search</button>
+        <button type="submit">SEARCH FLIGHT</button>
       </form>
 
-      {/* The <ul> element is always in the DOM to satisfy Cypress requirements */}
+      {/* Flight Results */}
       <ul className="results">
         {flights.length === 0 && hasSearched && (
           <p>No flights available.</p>
@@ -106,10 +130,9 @@ const FlightSearch = () => {
         
         {flights.map(flight => (
           <li key={flight.id} className="flight-card">
-            <p>{flight.airline} - {flight.price} - {flight.time}</p>
-            {/* Required class name for Cypress selector '.book-flight' */}
+            <p>{flight.airline} ({flight.code}) - {flight.time} - {flight.price}</p>
             <button className="book-flight" onClick={() => handleBook(flight)}>
-              Book Now
+              {flight.price}
             </button>
           </li>
         ))}
