@@ -76,6 +76,7 @@ const FlightSearch = () => {
   const [flights, setFlights] = useState([]);
   const [hasSearched, setHasSearched] = useState(false);
   const [selectedOnward, setSelectedOnward] = useState(null);
+const [selectedReturn, setSelectedReturn] = useState(null);
 
   const isRoundTrip = Boolean(formData.tripType && formData.tripType.toLowerCase().includes('round'));
 
@@ -90,7 +91,7 @@ const FlightSearch = () => {
     dispatch(setSearchQuery(formData));
     setHasSearched(true);
     setSelectedOnward(null);
-
+    setSelectedReturn(null);
     const fallbackFlights = [
       { id: 1, source: formData.source || 'Mumbai', destination: formData.destination || 'Bengaluru', airline: 'Air India', price: 'RS. 3,600', time: '04:00 - 06:00', code: 'AI-275' },
       { id: 2, source: formData.destination || 'Bengaluru', destination: formData.source || 'Mumbai', airline: 'Indigo', price: 'RS. 4,200', time: '10:00 - 12:30', code: '6E-102' }
@@ -121,15 +122,34 @@ const FlightSearch = () => {
       });
   };
 
-  const handleBook = (flight) => {
-    if (isRoundTrip && !selectedOnward) {
+const handleBook = (flight) => {
+  if (isRoundTrip) {
+    // First selection
+    if (!selectedOnward) {
       setSelectedOnward(flight);
-    } else {
-      dispatch(setSelectedFlight(flight));
-      history.push('/flight-booking');
+      return;
     }
-  };
 
+    // Second selection
+    if (!selectedReturn) {
+      setSelectedReturn(flight);
+
+      dispatch(
+        setSelectedFlight({
+          onward: selectedOnward,
+          return: flight,
+        })
+      );
+
+      history.push("/flight-booking");
+    }
+
+    return;
+  }
+
+  dispatch(setSelectedFlight(flight));
+  history.push("/flight-booking");
+};
   return (
     <div style={{ padding: '20px', maxWidth: '600px', margin: '0 auto' }}>
       <h2>Flight Booking App</h2>
@@ -212,9 +232,19 @@ const FlightSearch = () => {
               <p style={{ margin: 0, fontWeight: 'bold' }}>{flight.airline} ({flight.code})</p>
               <p style={{ margin: '5px 0 0 0', color: '#666', fontSize: '14px' }}>{flight.time} | {flight.source || formData.source} to {flight.destination || formData.destination}</p>
             </div>
-            <button className="book-flight book_flight" onClick={() => handleBook(flight)} style={{ padding: '8px 16px', background: '#3f51b5', color: 'white', border: 'none', cursor: 'pointer' }}>
-              {isRoundTrip && !selectedOnward ? index + 1 : flight.price}
-            </button>
+           <button
+  className="book-flight book_flight"
+  onClick={() => handleBook(flight)}
+  style={{
+    padding: "8px 16px",
+    background: "#3f51b5",
+    color: "white",
+    border: "none",
+    cursor: "pointer",
+  }}
+>
+  {isRoundTrip ? index + 1 : flight.price}
+</button>
           </li>
         ))}
       </ul>
