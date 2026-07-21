@@ -207,6 +207,7 @@ const FlightSearch = () => {
         <button type="submit" disabled={!isFormValid}>SEARCH FLIGHT</button>
       </form>
 
+
       <ul className="results" style={{ listStyle: 'none', padding: 0 }}>
         {flights.length === 0 && hasSearched && (
           <li className="no-flights" style={{ padding: '10px' }}>
@@ -215,15 +216,20 @@ const FlightSearch = () => {
           </li>
         )}
         
-        {flights.map(flight => (
+        {flights.map((flight, index) => (
           <li key={flight.id} className="flight-card" style={{ border: '1px solid #ccc', margin: '10px 0', padding: '10px' }}>
             <p>{flight.airline} ({flight.code}) - {flight.time} - {flight.price}</p>
-            <button className="book-flight book_flight" onClick={() => handleBook(flight)}>
-              {flight.price}
+            <button 
+              className="book-flight book_flight" 
+              onClick={() => handleBook(flight)}
+            >
+              {isRoundTrip && !selectedOnward ? index + 1 : flight.price}
             </button>
           </li>
         ))}
       </ul>
+
+
     </div>
   );
 };
