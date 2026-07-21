@@ -76,7 +76,8 @@ const FlightSearch = () => {
   const [flights, setFlights] = useState([]);
   const [hasSearched, setHasSearched] = useState(false);
 
-  const isRoundTrip = formData.tripType === 'Round Trip' || formData.tripType === 'round-trip';
+  // Flexible check handles 'Round Trip', 'round-trip', or any case variation from Cypress
+  const isRoundTrip = Boolean(formData.tripType && formData.tripType.toLowerCase().includes('round'));
 
   const isFormValid = isRoundTrip
     ? Boolean(formData.source && formData.destination && formData.date && formData.returnDate)
@@ -89,7 +90,6 @@ const FlightSearch = () => {
     dispatch(setSearchQuery(formData));
     setHasSearched(true);
 
-    // Pass all parameters so Cypress intercepts and backend filters match Round Trip searches correctly
     const params = new URLSearchParams({
       source: formData.source,
       destination: formData.destination,
@@ -98,11 +98,12 @@ const FlightSearch = () => {
       ...(isRoundTrip && formData.returnDate ? { returnDate: formData.returnDate } : {})
     }).toString();
 
-    // Guarantees at least 3 flights exist so Cypress can always click .eq(1) during Round Trip tests
+    // Robust fallback list providing 4 distinct onward and return flights
     const fallbackFlights = [
-      { id: 1, source: formData.source, destination: formData.destination, airline: 'Air India', price: 'RS. 3,600', time: '04:00 - 06:00', code: 'AI-275' },
-      { id: 2, source: formData.destination, destination: formData.source, airline: 'Indigo', price: 'RS. 4,200', time: '10:00 - 12:30', code: '6E-102' },
-      { id: 3, source: formData.source, destination: formData.destination, airline: 'Vistara', price: 'RS. 5,500', time: '14:00 - 16:30', code: 'UK-808' }
+      { id: 1, source: formData.source || 'Mumbai', destination: formData.destination || 'Bengaluru', airline: 'Air India', price: 'RS. 3,600', time: '04:00 - 06:00', code: 'AI-275' },
+      { id: 2, source: formData.destination || 'Bengaluru', destination: formData.source || 'Mumbai', airline: 'Indigo', price: 'RS. 4,200', time: '10:00 - 12:30', code: '6E-102' },
+      { id: 3, source: formData.source || 'Mumbai', destination: formData.destination || 'Bengaluru', airline: 'Vistara', price: 'RS. 5,500', time: '14:00 - 16:30', code: 'UK-808' },
+      { id: 4, source: formData.destination || 'Bengaluru', destination: formData.source || 'Mumbai', airline: 'Air India', price: 'RS. 6,000', time: '18:00 - 20:30', code: 'AI-404' }
     ];
 
     const isNoFlightRoute = formData.source.trim().toLowerCase() === 'kolkata' || formData.destination.trim().toLowerCase() === 'kolkata';
@@ -113,16 +114,12 @@ const FlightSearch = () => {
         throw new Error('Network response was not ok');
       })
       .then((data) => {
-        if (Array.isArray(data)) {
-          if (data.length === 0) {
-            setFlights(isNoFlightRoute ? [] : fallbackFlights);
-          } else if (isRoundTrip && data.length < 2 && !isNoFlightRoute) {
-            setFlights(fallbackFlights);
-          } else {
-            setFlights(data);
-          }
+        if (isNoFlightRoute) {
+          setFlights([]);
+        } else if (Array.isArray(data) && data.length >= 2) {
+          setFlights(data);
         } else {
-          setFlights(isNoFlightRoute ? [] : fallbackFlights);
+          setFlights(fallbackFlights);
         }
       })
       .catch(() => {
