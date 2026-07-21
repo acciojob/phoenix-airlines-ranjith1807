@@ -208,6 +208,8 @@ const FlightSearch = () => {
       </form>
 
 
+     
+
       <ul className="results" style={{ listStyle: 'none', padding: 0 }}>
         {flights.length === 0 && hasSearched && (
           <li className="no-flights" style={{ padding: '10px' }}>
@@ -223,11 +225,12 @@ const FlightSearch = () => {
               className="book-flight book_flight" 
               onClick={() => handleBook(flight)}
             >
-              {isRoundTrip && !selectedOnward ? index + 1 : flight.price}
+              {isRoundTrip && !selectedOnward ? `${index + 1}` : flight.price}
             </button>
           </li>
         ))}
       </ul>
+
 
 
     </div>
