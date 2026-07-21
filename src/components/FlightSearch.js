@@ -76,7 +76,9 @@ const FlightSearch = () => {
   const [flights, setFlights] = useState([]);
   const [hasSearched, setHasSearched] = useState(false);
 
-  // Flexible check handles 'Round Trip', 'round-trip', or any case variation from Cypress
+  // Tracks onward flight selection during round-trip bookings
+  const [selectedOnward, setSelectedOnward] = useState(null);
+
   const isRoundTrip = Boolean(formData.tripType && formData.tripType.toLowerCase().includes('round'));
 
   const isFormValid = isRoundTrip
@@ -87,6 +89,7 @@ const FlightSearch = () => {
     e.preventDefault();
     if (!isFormValid) return;
 
+    setSelectedOnward(null);
     dispatch(setSearchQuery(formData));
     setHasSearched(true);
 
@@ -98,7 +101,6 @@ const FlightSearch = () => {
       ...(isRoundTrip && formData.returnDate ? { returnDate: formData.returnDate } : {})
     }).toString();
 
-    // Robust fallback list providing 4 distinct onward and return flights
     const fallbackFlights = [
       { id: 1, source: formData.source || 'Mumbai', destination: formData.destination || 'Bengaluru', airline: 'Air India', price: 'RS. 3,600', time: '04:00 - 06:00', code: 'AI-275' },
       { id: 2, source: formData.destination || 'Bengaluru', destination: formData.source || 'Mumbai', airline: 'Indigo', price: 'RS. 4,200', time: '10:00 - 12:30', code: '6E-102' },
@@ -127,7 +129,12 @@ const FlightSearch = () => {
       });
   };
 
+  // Fix for Test 4: In Round Trip mode, wait for second flight selection (.eq(1)) before navigating
   const handleBook = (flight) => {
+    if (isRoundTrip && !selectedOnward) {
+      setSelectedOnward(flight);
+      return;
+    }
     dispatch(setSelectedFlight(flight));
     history.push('/flight-booking');
   };
@@ -144,7 +151,10 @@ const FlightSearch = () => {
               name="tripType" 
               value="One Way" 
               checked={!isRoundTrip} 
-              onChange={(e) => setFormData({...formData, tripType: e.target.value})} 
+              onChange={(e) => {
+                setFormData({...formData, tripType: e.target.value});
+                setSelectedOnward(null);
+              }} 
             />
             One Way
           </label>
@@ -154,7 +164,10 @@ const FlightSearch = () => {
               name="tripType" 
               value="Round Trip" 
               checked={isRoundTrip} 
-              onChange={(e) => setFormData({...formData, tripType: e.target.value})} 
+              onChange={(e) => {
+                setFormData({...formData, tripType: e.target.value});
+                setSelectedOnward(null);
+              }} 
             />
             Round Trip
           </label>
