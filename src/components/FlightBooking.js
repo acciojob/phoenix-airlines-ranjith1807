@@ -13,8 +13,9 @@ const FlightBooking = () => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    // Fix for Test 3: Must match exact wording expected by Cypress assertion
     if (!user.firstName || !user.lastName || !user.email || !user.phone) {
-      setError('All fields are required.');
+      setError('All Fields are mandatory');
       return;
     }
     if (!/\S+@\S+\.\S+/.test(user.email)) {
@@ -31,33 +32,53 @@ const FlightBooking = () => {
   return (
     <div>
       <h2>Booking Confirmation for Flight {selectedFlight.airline} ({selectedFlight.code})</h2>
-      {error && <p style={{color: 'red'}}>{error}</p>}
+      {error && <p className="error-message" style={{ color: 'red' }}>{error}</p>}
       
       <form onSubmit={handleSubmit}>
-        <input 
-          type="text" 
-          placeholder="First Name *" 
-          value={user.firstName} 
-          onChange={(e) => setUser({...user, firstName: e.target.value})} 
-        />
-        <input 
-          type="text" 
-          placeholder="Last Name *" 
-          value={user.lastName} 
-          onChange={(e) => setUser({...user, lastName: e.target.value})} 
-        />
-        <input 
-          type="text" 
-          placeholder="Email ID *" 
-          value={user.email} 
-          onChange={(e) => setUser({...user, email: e.target.value})} 
-        />
-        <input 
-          type="text" 
-          placeholder="Mobile Number *" 
-          value={user.phone} 
-          onChange={(e) => setUser({...user, phone: e.target.value})} 
-        />
+        <div style={{ margin: '10px 0' }}>
+          <input 
+            type="text" 
+            placeholder="First Name *" 
+            value={user.firstName} 
+            onChange={(e) => {
+              setUser({...user, firstName: e.target.value});
+              if (error) setError('');
+            }} 
+          />
+        </div>
+        <div style={{ margin: '10px 0' }}>
+          <input 
+            type="text" 
+            placeholder="Last Name *" 
+            value={user.lastName} 
+            onChange={(e) => {
+              setUser({...user, lastName: e.target.value});
+              if (error) setError('');
+            }} 
+          />
+        </div>
+        <div style={{ margin: '10px 0' }}>
+          <input 
+            type="text" 
+            placeholder="Email ID *" 
+            value={user.email} 
+            onChange={(e) => {
+              setUser({...user, email: e.target.value});
+              if (error) setError('');
+            }} 
+          />
+        </div>
+        <div style={{ margin: '10px 0' }}>
+          <input 
+            type="text" 
+            placeholder="Mobile Number *" 
+            value={user.phone} 
+            onChange={(e) => {
+              setUser({...user, phone: e.target.value});
+              if (error) setError('');
+            }} 
+          />
+        </div>
         <button type="submit">CONFIRM BOOKING</button>
       </form>
     </div>
