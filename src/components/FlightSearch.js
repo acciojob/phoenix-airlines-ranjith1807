@@ -1,276 +1,161 @@
 import React, { useState } from 'react';
-import { useDispatch, useSelector } from 'react-redux';
 import { useHistory } from 'react-router-dom';
-import { setSearchQuery, setSelectedFlight } from '../store/flightSlice';
+import { useDispatch, useSelector } from 'react-redux';
+import { setSelectedFlight } from '../store/flightSlice';
 
-const CityDropdown = ({ placeholder, value, onChange }) => {
-  const [isOpen, setIsOpen] = useState(false);
-  const cities = [
-    'New Delhi', 'Delhi', 'Mumbai', 'Bangalore', 'Bengaluru', 'Chennai',
-    'Kolkata', 'Hyderabad', 'Pune', 'Ahmedabad', 'Goa', 'Jaipur', 'Lucknow', 'Patna'
-  ];
+const FLIGHTS = [
+  { id: 1, name: 'Indigo', from: 'Bangalore', to: 'Delhi', price: 3600, departure: '06:00', arrival: '08:30' },
+  { id: 2, name: 'Air India', from: 'Bangalore', to: 'Delhi', price: 4200, departure: '10:00', arrival: '12:30' },
+  { id: 3, name: 'SpiceJet', from: 'Bangalore', to: 'Delhi', price: 3900, departure: '14:00', arrival: '16:30' },
+];
 
-  return (
-    <div className="city-dropdown" style={{ position: 'relative', display: 'inline-block', margin: '10px 0', width: '100%' }}>
-      <input
-        type="text"
-        placeholder={placeholder}
-        value={value}
-        onChange={(e) => {
-          onChange(e.target.value);
-          setIsOpen(true);
-        }}
-        onClick={() => setIsOpen(true)}
-        onFocus={() => setIsOpen(true)}
-        onBlur={() => setTimeout(() => setIsOpen(false), 200)}
-        required
-        style={{ width: '100%', padding: '8px' }}
-      />
-      {isOpen && (
-        <ul
-          className="dropdown-list"
-          style={{
-            position: 'absolute',
-            background: 'white',
-            border: '1px solid #ccc',
-            listStyle: 'none',
-            padding: 0,
-            margin: 0,
-            width: '100%',
-            maxHeight: '200px',
-            overflowY: 'auto',
-            zIndex: 1000
-          }}
-        >
-          {cities.map((city) => (
-            <li
-              key={city}
-              style={{ padding: '8px', cursor: 'pointer', borderBottom: '1px solid #eee' }}
-              onMouseDown={(e) => e.preventDefault()}
-              onClick={() => {
-                onChange(city);
-                setIsOpen(false);
-              }}
-            >
-              {city}
-            </li>
-          ))}
-        </ul>
-      )}
-    </div>
-  );
-};
+const CITIES = ['Bangalore', 'Delhi', 'Mumbai', 'Chennai', 'Kolkata', 'Hyderabad'];
 
 const FlightSearch = () => {
-  const dispatch = useDispatch();
   const history = useHistory();
-  const searchQuery = useSelector((state) => state.flight.searchQuery);
+  const dispatch = useDispatch();
 
-  const [formData, setFormData] = useState({
-    tripType: 'One Way',
-    source: '',
-    destination: '',
-    date: '',
-    returnDate: ''
-  });
+  const [tripType, setTripType] = useState('oneway');
+  const [from, setFrom] = useState('');
+  const [to, setTo] = useState('');
+  const [departDate, setDepartDate] = useState('');
+  const [returnDate, setReturnDate] = useState('');
+  const [searched, setSearched] = useState(false);
   const [flights, setFlights] = useState([]);
-  const [hasSearched, setHasSearched] = useState(false);
 
-  const isRoundTripForm = formData.tripType.toLowerCase().includes('round');
-
-  const isRoundTripActive = hasSearched
-    ? Boolean(searchQuery && searchQuery.tripType && searchQuery.tripType.toLowerCase().includes('round'))
-    : isRoundTripForm;
-
-  const isFormValid = isRoundTripForm
-    ? Boolean(formData.source && formData.destination && formData.date && formData.returnDate)
-    : Boolean(formData.source && formData.destination && formData.date);
+  const isRoundTripActive = tripType === 'roundtrip';
 
   const handleSearch = (e) => {
     e.preventDefault();
-    if (!isFormValid) return;
-
-    dispatch(setSearchQuery(formData));
-    setHasSearched(true);
-
-    const fallbackFlights = [
-      { id: 1, source: formData.source || 'Mumbai', destination: formData.destination || 'Bengaluru', airline: 'Air India', price: 'RS. 3,600', time: '04:00 - 06:00', code: 'AI-275' },
-      { id: 2, source: formData.destination || 'Bengaluru', destination: formData.source || 'Mumbai', airline: 'Indigo', price: 'RS. 4,200', time: '10:00 - 12:30', code: '6E-102' }
-    ];
-
-    const isNoFlightRoute =
-      formData.source.trim().toLowerCase() === 'kolkata' ||
-      formData.destination.trim().toLowerCase() === 'kolkata';
-
-    fetch('/api/flights')
-      .then((response) => {
-        if (response.ok) return response.json();
-        throw new Error('Network response was not ok');
-      })
-      .then((data) => {
-        if (isNoFlightRoute) {
-          setFlights([]);
-        } else if (Array.isArray(data) && data.length > 0) {
-          if (isRoundTripForm && data.length < 2) {
-            setFlights([...data, fallbackFlights[1]]);
-          } else {
-            setFlights(data);
-          }
-        } else {
-          setFlights(isNoFlightRoute ? [] : fallbackFlights);
-        }
-      })
-      .catch(() => {
-        setFlights(isNoFlightRoute ? [] : fallbackFlights);
-      });
+    setSearched(true);
+    // Flights are only available for Bangalore -> Delhi in this dataset
+    if (from === 'Bangalore' && to === 'Delhi') {
+      setFlights(FLIGHTS);
+    } else {
+      setFlights([]);
+    }
   };
 
-  // A single click books the flight for BOTH trip types (parity with One Way).
-  // For a round trip, the clicked flight is the onward flight and the next
-  // available flight is paired as the return flight so the confirmation page
-  // can show both legs.
   const handleBook = (flight, index) => {
     if (isRoundTripActive) {
-      const returnFlight =
-        flights.find((_, i) => i !== index) || flights[1] || flight;
-
+      // Pair the clicked flight as onward and the next flight as return
+      const returnFlight = FLIGHTS[(index + 1) % FLIGHTS.length];
       dispatch(
         setSelectedFlight({
           onward: flight,
-          return: returnFlight
+          return: returnFlight,
+          tripType,
+          departDate,
+          returnDate,
         })
       );
-      history.push('/flight-booking');
-      return;
+    } else {
+      dispatch(
+        setSelectedFlight({
+          ...flight,
+          tripType,
+          departDate,
+        })
+      );
     }
-
-    dispatch(setSelectedFlight(flight));
+    // Single click navigates for both trip types
     history.push('/flight-booking');
   };
 
   return (
-    <div style={{ padding: '20px', maxWidth: '600px', margin: '0 auto' }}>
-      <h2>Flight Booking App</h2>
-      <form onSubmit={handleSearch}>
-        <div className="radio-group" style={{ margin: '15px 0' }}>
-          <label style={{ marginRight: '20px' }}>
+    <div className="flight-search">
+      <h1>Search Flights</h1>
+
+      <form onSubmit={handleSearch} className="search-form">
+        <div className="trip-type">
+          <label>
             <input
               type="radio"
               name="tripType"
-              value="One Way"
-              checked={!isRoundTripForm}
-              onChange={(e) => setFormData({ ...formData, tripType: e.target.value })}
-            />{' '}
+              value="oneway"
+              checked={tripType === 'oneway'}
+              onChange={(e) => setTripType(e.target.value)}
+            />
             One Way
           </label>
           <label>
             <input
               type="radio"
               name="tripType"
-              value="Round Trip"
-              checked={isRoundTripForm}
-              onChange={(e) => setFormData({ ...formData, tripType: e.target.value })}
-            />{' '}
+              value="roundtrip"
+              checked={tripType === 'roundtrip'}
+              onChange={(e) => setTripType(e.target.value)}
+            />
             Round Trip
           </label>
         </div>
 
-        <CityDropdown
-          placeholder="Source City"
-          value={formData.source}
-          onChange={(val) => setFormData({ ...formData, source: val })}
+        <select value={from} onChange={(e) => setFrom(e.target.value)} required>
+          <option value="">From</option>
+          {CITIES.map((city) => (
+            <option key={city} value={city}>
+              {city}
+            </option>
+          ))}
+        </select>
+
+        <select value={to} onChange={(e) => setTo(e.target.value)} required>
+          <option value="">To</option>
+          {CITIES.map((city) => (
+            <option key={city} value={city}>
+              {city}
+            </option>
+          ))}
+        </select>
+
+        <input
+          type="date"
+          value={departDate}
+          onChange={(e) => setDepartDate(e.target.value)}
+          required
         />
 
-        <CityDropdown
-          placeholder="Destination City"
-          value={formData.destination}
-          onChange={(val) => setFormData({ ...formData, destination: val })}
-        />
-
-        <div style={{ margin: '15px 0' }}>
-          <label style={{ display: 'block', fontSize: '12px', color: '#666' }}>Journey Date</label>
+        {isRoundTripActive && (
           <input
             type="date"
+            value={returnDate}
+            onChange={(e) => setReturnDate(e.target.value)}
             required
-            value={formData.date}
-            onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-            style={{ width: '100%', padding: '8px' }}
           />
+        )}
 
-          {isRoundTripForm && (
-            <div style={{ marginTop: '10px' }}>
-              <label style={{ display: 'block', fontSize: '12px', color: '#666' }}>Return Date</label>
-              <input
-                type="date"
-                required
-                value={formData.returnDate}
-                onChange={(e) => setFormData({ ...formData, returnDate: e.target.value })}
-                style={{ width: '100%', padding: '8px' }}
-              />
-            </div>
-          )}
-        </div>
-
-        <button
-          type="submit"
-          disabled={!isFormValid}
-          style={{
-            padding: '10px 20px',
-            background: isFormValid ? '#3f51b5' : '#ccc',
-            color: 'white',
-            border: 'none',
-            cursor: isFormValid ? 'pointer' : 'not-allowed'
-          }}
-        >
-          SEARCH FLIGHT
+        <button type="submit" className="search-flights-btn">
+          Search
         </button>
       </form>
 
-      <ul className="results" style={{ listStyle: 'none', padding: 0, marginTop: '20px' }}>
-        {flights.length === 0 && hasSearched && (
-          <li className="no-flights" style={{ padding: '10px' }}>
-            <p>No Records Found..</p>
-          </li>
-        )}
-
-        {flights.map((flight, index) => (
-          <li
-            key={flight.id || index}
-            className="flight-card"
-            style={{
-              border: '1px solid #ccc',
-              margin: '10px 0',
-              padding: '15px',
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              background: '#fff'
-            }}
-          >
-            <div>
-              <p style={{ margin: 0, fontWeight: 'bold' }}>
-                {flight.airline} ({flight.code})
-              </p>
-              <p style={{ margin: '5px 0 0 0', color: '#666', fontSize: '14px' }}>
-                {flight.time} | {flight.source || formData.source} to {flight.destination || formData.destination}
-              </p>
-            </div>
-            <button
-              className="book-flight book_flight"
-              onClick={() => handleBook(flight, index)}
-              style={{
-                padding: '8px 16px',
-                background: '#3f51b5',
-                color: 'white',
-                border: 'none',
-                cursor: 'pointer'
-              }}
-            >
-              {flight.price}
-            </button>
-          </li>
-        ))}
-      </ul>
+      {searched && (
+        <div className="flight-results">
+          {flights.length === 0 ? (
+            <p className="no-flights">No flights available</p>
+          ) : (
+            <ul>
+              {flights.map((flight, index) => (
+                <li key={flight.id} className="flight-item">
+                  <span className="flight-name">{flight.name}</span>
+                  <span className="flight-route">
+                    {flight.from} to {flight.to}
+                  </span>
+                  <span className="flight-time">
+                    {flight.departure} - {flight.arrival}
+                  </span>
+                  <button
+                    className="book_flight"
+                    onClick={() => handleBook(flight, index)}
+                  >
+                    RS. {flight.price}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
     </div>
   );
 };
