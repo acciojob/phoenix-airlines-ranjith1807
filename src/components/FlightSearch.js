@@ -75,8 +75,6 @@ const FlightSearch = () => {
   });
   const [flights, setFlights] = useState([]);
   const [hasSearched, setHasSearched] = useState(false);
-  const [selectedOnward, setSelectedOnward] = useState(null);
-  const [selectedReturn, setSelectedReturn] = useState(null);
 
   const isRoundTripForm = formData.tripType.toLowerCase().includes('round');
 
@@ -94,8 +92,6 @@ const FlightSearch = () => {
 
     dispatch(setSearchQuery(formData));
     setHasSearched(true);
-    setSelectedOnward(null);
-    setSelectedReturn(null);
 
     const fallbackFlights = [
       { id: 1, source: formData.source || 'Mumbai', destination: formData.destination || 'Bengaluru', airline: 'Air India', price: 'RS. 3,600', time: '04:00 - 06:00', code: 'AI-275' },
@@ -129,23 +125,22 @@ const FlightSearch = () => {
       });
   };
 
-  const handleBook = (flight) => {
+  // A single click books the flight for BOTH trip types (parity with One Way).
+  // For a round trip, the clicked flight is the onward flight and the next
+  // available flight is paired as the return flight so the confirmation page
+  // can show both legs.
+  const handleBook = (flight, index) => {
     if (isRoundTripActive) {
-      if (!selectedOnward) {
-        setSelectedOnward(flight);
-        return;
-      }
+      const returnFlight =
+        flights.find((_, i) => i !== index) || flights[1] || flight;
 
-      if (!selectedReturn) {
-        setSelectedReturn(flight);
-        dispatch(
-          setSelectedFlight({
-            onward: selectedOnward,
-            return: flight
-          })
-        );
-        history.push('/flight-booking');
-      }
+      dispatch(
+        setSelectedFlight({
+          onward: flight,
+          return: returnFlight
+        })
+      );
+      history.push('/flight-booking');
       return;
     }
 
@@ -262,7 +257,7 @@ const FlightSearch = () => {
             </div>
             <button
               className="book-flight book_flight"
-              onClick={() => handleBook(flight)}
+              onClick={() => handleBook(flight, index)}
               style={{
                 padding: '8px 16px',
                 background: '#3f51b5',
@@ -271,7 +266,7 @@ const FlightSearch = () => {
                 cursor: 'pointer'
               }}
             >
-              {isRoundTripActive ? String(index + 1) : flight.price}
+              {flight.price}
             </button>
           </li>
         ))}
